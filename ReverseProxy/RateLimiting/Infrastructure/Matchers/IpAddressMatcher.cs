@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Net.Sockets;
 
-namespace ReverseProxy.RateLimiting.Infrastructure.Matching
+namespace ReverseProxy.RateLimiting.Infrastructure.Matchers
 {
     public sealed class IpAddressMatcher : IIpAddressMatcher
     {

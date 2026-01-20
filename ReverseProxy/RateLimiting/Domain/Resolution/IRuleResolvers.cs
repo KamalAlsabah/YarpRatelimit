@@ -1,7 +1,8 @@
 #nullable enable
 
-using ReverseProxy.RateLimiting.Domain.Rules;
-using ReverseProxy.RateLimiting.Domain.Strategies;
+using ReverseProxy.RateLimiting.Domain.Models;
+using ReverseProxy.RateLimiting.Domain.Models.Rules;
+using ReverseProxy.RateLimiting.Domain.Models.Strategies;
 
 namespace ReverseProxy.RateLimiting.Domain.Resolution
 {

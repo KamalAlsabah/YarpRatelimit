@@ -3,14 +3,14 @@ using StackExchange.Redis;
 using System;
 using System.Threading.RateLimiting;
 
-namespace ReverseProxy.RateLimiting.Domain.Strategies
+namespace ReverseProxy.RateLimiting.Domain.Models.Strategies
 {
-    public sealed class SlidingWindowStrategy : RateLimitStrategy
+    public sealed class ConcurrencyStrategy : RateLimitStrategy
     {
-        private readonly SlidingWindowConfig _config;
+        private readonly ConcurrencyConfig _config;
         private readonly IConnectionMultiplexer _connection;
 
-        public SlidingWindowStrategy(SlidingWindowConfig config, IConnectionMultiplexer connection)
+        public ConcurrencyStrategy(ConcurrencyConfig config, IConnectionMultiplexer connection)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _connection = connection ?? throw new ArgumentNullException(nameof(connection));
@@ -18,26 +18,26 @@ namespace ReverseProxy.RateLimiting.Domain.Strategies
 
         public override RateLimitPartition<string> CreatePartition(string key)
         {
-            return RedisRateLimitPartition.GetSlidingWindowRateLimiter(
+            return RedisRateLimitPartition.GetConcurrencyRateLimiter(
                 key,
-                _ => new RedisSlidingWindowRateLimiterOptions
+                _ => new RedisConcurrencyRateLimiterOptions
                 {
                     PermitLimit = _config.PermitLimit,
-                    Window = _config.Window,
+                    QueueLimit = _config.QueueLimit,
                     ConnectionMultiplexerFactory = () => _connection
                 });
         }
     }
 
-    public sealed class SlidingWindowConfig
+    public sealed class ConcurrencyConfig
     {
         public int PermitLimit { get; }
-        public TimeSpan Window { get; }
+        public int QueueLimit { get; }
 
-        public SlidingWindowConfig(int permitLimit, TimeSpan window)
+        public ConcurrencyConfig(int permitLimit, int queueLimit)
         {
             PermitLimit = permitLimit;
-            Window = window;
+            QueueLimit = queueLimit;
         }
     }
 }

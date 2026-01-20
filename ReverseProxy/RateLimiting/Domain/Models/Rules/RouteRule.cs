@@ -1,7 +1,7 @@
-﻿using ReverseProxy.RateLimiting.Domain.Strategies;
+﻿using ReverseProxy.RateLimiting.Domain.Models.Strategies;
 using System;
 
-namespace ReverseProxy.RateLimiting.Domain.Rules
+namespace ReverseProxy.RateLimiting.Domain.Models.Rules
 {
     public sealed class RouteRule
     {

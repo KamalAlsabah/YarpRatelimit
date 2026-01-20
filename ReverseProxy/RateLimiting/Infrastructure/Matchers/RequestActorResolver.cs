@@ -1,13 +1,12 @@
-#nullable enable
 
 using Microsoft.AspNetCore.Http;
-using ReverseProxy.RateLimiting.Domain;
 using ReverseProxy.RateLimiting.Domain.Matchers;
+using ReverseProxy.RateLimiting.Domain.Models;
 using System;
 using System.Linq;
 using System.Security.Claims;
 
-namespace ReverseProxy.RateLimiting.Infrastructure
+namespace ReverseProxy.RateLimiting.Infrastructure.Matchers
 {
     public sealed class RequestActorResolver : IRequestActorResolver
     {
@@ -50,7 +49,7 @@ namespace ReverseProxy.RateLimiting.Infrastructure
             return int.TryParse(tenantIdValue, out var id) ? id : null;
         }
 
-        private static string? ResolveClientId(HttpContext context)
+        private static string ResolveClientId(HttpContext context)
         {
             return context.User.FindFirst("clientId")?.Value ??
                    context.Request.Headers["X-Client-Id"].FirstOrDefault();

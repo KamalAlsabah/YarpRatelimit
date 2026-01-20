@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
-using ReverseProxy.RateLimiting.Domain.Rules;
-using ReverseProxy.RateLimiting.Domain.Strategies;
+using ReverseProxy.RateLimiting.Domain.Models.Rules;
+using ReverseProxy.RateLimiting.Domain.Models.Strategies;
 using ReverseProxy.RateLimiting.Integration.Configuration;
 using StackExchange.Redis;
 using System.Collections.Immutable;

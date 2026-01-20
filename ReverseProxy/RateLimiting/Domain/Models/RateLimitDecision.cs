@@ -1,7 +1,7 @@
-using ReverseProxy.RateLimiting.Domain.Strategies;
+using ReverseProxy.RateLimiting.Domain.Models.Strategies;
 using System;
 
-namespace ReverseProxy.RateLimiting.Domain.Resolution
+namespace ReverseProxy.RateLimiting.Domain.Models
 {
     public sealed class RateLimitDecision
     {

@@ -1,10 +1,11 @@
 #nullable enable
 
-using ReverseProxy.RateLimiting.Domain;
+using ReverseProxy.RateLimiting.Domain.Helpers;
 using ReverseProxy.RateLimiting.Domain.Matchers;
+using ReverseProxy.RateLimiting.Domain.Models;
+using ReverseProxy.RateLimiting.Domain.Models.Rules;
+using ReverseProxy.RateLimiting.Domain.Models.Strategies;
 using ReverseProxy.RateLimiting.Domain.Resolution;
-using ReverseProxy.RateLimiting.Domain.Rules;
-using ReverseProxy.RateLimiting.Domain.Strategies;
 
 namespace ReverseProxy.RateLimiting.Infrastructure.Resolution
 {

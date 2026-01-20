@@ -3,10 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using RedisRateLimiting.AspNetCore;
 using ReverseProxy.RateLimiting.Domain.Matchers;
 using ReverseProxy.RateLimiting.Domain.Resolution;
-using ReverseProxy.RateLimiting.Infrastructure;
-using ReverseProxy.RateLimiting.Infrastructure.Matching;
+using ReverseProxy.RateLimiting.Infrastructure.Matchers;
 using ReverseProxy.RateLimiting.Infrastructure.Resolution;
-using ReverseProxy.RateLimiting.Integration.Configuration;
 using StackExchange.Redis;
 using System.Threading.Tasks;
 

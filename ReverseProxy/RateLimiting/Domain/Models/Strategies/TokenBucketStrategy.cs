@@ -3,7 +3,7 @@ using StackExchange.Redis;
 using System;
 using System.Threading.RateLimiting;
 
-namespace ReverseProxy.RateLimiting.Domain.Strategies
+namespace ReverseProxy.RateLimiting.Domain.Models.Strategies
 {
     public sealed class TokenBucketStrategy : RateLimitStrategy
     {

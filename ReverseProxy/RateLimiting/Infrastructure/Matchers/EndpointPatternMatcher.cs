@@ -1,7 +1,7 @@
 using ReverseProxy.RateLimiting.Domain.Matchers;
 using System;
 
-namespace ReverseProxy.RateLimiting.Infrastructure
+namespace ReverseProxy.RateLimiting.Infrastructure.Matchers
 {
     public sealed class EndpointPatternMatcher : IEndpointPatternMatcher
     {

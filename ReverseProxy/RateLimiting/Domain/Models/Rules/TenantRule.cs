@@ -1,35 +1,35 @@
-﻿using ReverseProxy.RateLimiting.Domain.Strategies;
+﻿using ReverseProxy.RateLimiting.Domain.Models.Strategies;
 using System;
 using System.Collections.Immutable;
 
-namespace ReverseProxy.RateLimiting.Domain.Rules
+namespace ReverseProxy.RateLimiting.Domain.Models.Rules
 {
-    public sealed class WhitelistRule
+    public sealed class TenantRule
     {
         public string Name { get; }
         public string Description { get; }
-        public ImmutableHashSet<string> IpAddresses { get; }
         public ImmutableHashSet<int> TenantIds { get; }
         public ImmutableHashSet<string> ClientIds { get; }
-        public ImmutableList<string> EndpointPatterns { get; }
+        public RateLimitStrategy Strategy { get; }
         public bool IsEnabled { get; }
+        public int Priority { get; }
 
-        public WhitelistRule(
+        public TenantRule(
             string name,
             string description,
-            ImmutableHashSet<string> ipAddresses,
             ImmutableHashSet<int> tenantIds,
             ImmutableHashSet<string> clientIds,
-            ImmutableList<string> endpointPatterns,
-            bool isEnabled = true)
+            RateLimitStrategy strategy,
+            bool isEnabled = true,
+            int priority = 0)
         {
             Name = name;
             Description = description;
-            IpAddresses = ipAddresses ?? throw new ArgumentNullException(nameof(ipAddresses));
             TenantIds = tenantIds ?? throw new ArgumentNullException(nameof(tenantIds));
             ClientIds = clientIds ?? throw new ArgumentNullException(nameof(clientIds));
-            EndpointPatterns = endpointPatterns ?? throw new ArgumentNullException(nameof(endpointPatterns));
+            Strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
             IsEnabled = isEnabled;
+            Priority = priority;
         }
     }
 }

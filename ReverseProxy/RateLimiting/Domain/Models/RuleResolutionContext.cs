@@ -2,7 +2,7 @@
 
 using Microsoft.AspNetCore.Http;
 
-namespace ReverseProxy.RateLimiting.Domain
+namespace ReverseProxy.RateLimiting.Domain.Models
 {
     public sealed class RequestActor
     {

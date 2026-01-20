@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace ReverseProxy.RateLimiting.Domain.Matchers
+namespace ReverseProxy.RateLimiting.Domain.Helpers
 {
     public static class ActorMatcher
     {
