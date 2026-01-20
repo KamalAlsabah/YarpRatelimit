@@ -6,6 +6,7 @@ using RedisRateLimiting.AspNetCore;
 using ReverseProxy.RateLimiting.Domain.Matchers;
 using ReverseProxy.RateLimiting.Domain.Models;
 using ReverseProxy.RateLimiting.Domain.Resolution;
+using ReverseProxy.RateLimiting.Infrastructure.Monitoring;
 using ReverseProxy.RateLimiting.Integration.Configuration;
 using System;
 using System.IO;
@@ -22,6 +23,7 @@ namespace ReverseProxy
         private readonly IRequestActorResolver _actorResolver;
         private readonly IRateLimitRuleOrchestrator _orchestrator;
         private readonly IRateLimitConfigurationProvider _configProvider;
+        private readonly IRateLimitMetrics? _metrics;
 
         private readonly Func<OnRejectedContext, CancellationToken, ValueTask> _onRejected =
             (context, token) =>
@@ -34,66 +36,102 @@ namespace ReverseProxy
         public GatewayPolicy(
             IRequestActorResolver actorResolver,
             IRateLimitRuleOrchestrator orchestrator,
-            IRateLimitConfigurationProvider configProvider)
+            IRateLimitConfigurationProvider configProvider,
+            IRateLimitMetrics? metrics = null)
         {
             _actorResolver = actorResolver;
             _orchestrator = orchestrator;
             _configProvider = configProvider;
+            _metrics = metrics;
         }
 
-        public Func<OnRejectedContext, CancellationToken, ValueTask>? OnRejected => (context, ct) => RateLimitMetadata.OnRejected(context.HttpContext, context.Lease, ct);
+        public Func<OnRejectedContext, CancellationToken, ValueTask>? OnRejected => async (context, ct) =>
+        {
+            // Record rejection in metrics
+            if (_metrics != null)
+            {
+                // Get partition key from HttpContext.Items (set in GetPartition)
+                var partitionKey = context.HttpContext.Items["RateLimitPartitionKey"] as string ?? "unknown";
+                _metrics.RecordRejection(partitionKey);
+            }
+            
+            await RateLimitMetadata.OnRejected(context.HttpContext, context.Lease, ct);
+        };
 
         public RateLimitPartition<string> GetPartition(HttpContext httpContext)
         {
-            var actor = _actorResolver.Resolve(httpContext);
-            
-            var routeId = httpContext.GetEndpoint()?.Metadata.GetMetadata<Yarp.ReverseProxy.Model.RouteModel>()?.Config.RouteId;
-            var path = httpContext.Request.Path.Value ?? string.Empty;
-            var method = httpContext.Request.Method;
+            // Track performance if metrics are enabled
+            using (_metrics != null ? new PerformanceTimer(_metrics) : default)
+            {
+                var actor = _actorResolver.Resolve(httpContext);
+                
+                var routeId = httpContext.GetEndpoint()?.Metadata.GetMetadata<Yarp.ReverseProxy.Model.RouteModel>()?.Config.RouteId;
+                var path = httpContext.Request.Path.Value ?? string.Empty;
+                var method = httpContext.Request.Method;
 
-            var resolutionContext = new RuleResolutionContext(actor, routeId, path, method, httpContext);
-            var config = _configProvider.GetConfiguration();
+                var resolutionContext = new RuleResolutionContext(actor, routeId, path, method, httpContext);
+                var config = _configProvider.GetConfiguration();
 
-            var decision = _orchestrator.Resolve(
-                config.WhitelistRules,
-                config.RouteRules,
-                config.TenantRules,
-                config.GlobalDefault,
-                resolutionContext);
+                // Use optimized indexed cache resolution
+                var decision = _orchestrator.ResolveWithCache(
+                    config.IndexedCache,
+                    config.GlobalDefault,
+                    resolutionContext);
 
-            var partitionKey = BuildPartitionKey(resolutionContext, decision);
+                var partitionKey = BuildPartitionKey(resolutionContext, decision);
+                
+                // Store partition key in HttpContext.Items for rejection tracking
+                httpContext.Items["RateLimitPartitionKey"] = partitionKey;
 
-            return decision.Strategy.CreatePartition(partitionKey);
+                return decision.Strategy.CreatePartition(partitionKey);
+            }
         }
 
         private static string BuildPartitionKey(RuleResolutionContext context, RateLimitDecision decision)
         {
-            var keyParts = new StringBuilder();
+            // Optimized key building with minimal allocations
             if (decision.IsRouteRule)
             {
-                return keyParts.Append($"route:{ context.RouteId}").ToString();
+                return $"route:{context.RouteId}";
             }
+
             var actor = context.Actor;
 
+            // Use string interpolation for better performance than StringBuilder for simple cases
             if (actor.TenantId.HasValue)
-                keyParts.Append($"tenant:{actor.TenantId}");
+            {
+                if (!string.IsNullOrEmpty(actor.ClientId))
+                {
+                    if (!string.IsNullOrEmpty(actor.ActorId))
+                    {
+                        return $"tenant:{actor.TenantId}:client:{actor.ClientId}:user:{actor.ActorId}";
+                    }
+                    return $"tenant:{actor.TenantId}:client:{actor.ClientId}";
+                }
+                
+                if (!string.IsNullOrEmpty(actor.ActorId))
+                {
+                    return $"tenant:{actor.TenantId}:user:{actor.ActorId}";
+                }
+                
+                return $"tenant:{actor.TenantId}";
+            }
 
             if (!string.IsNullOrEmpty(actor.ClientId))
             {
-                if (keyParts.Length > 0) keyParts.Append(":");
-                keyParts.Append($"client:{actor.ClientId}");
+                if (!string.IsNullOrEmpty(actor.ActorId))
+                {
+                    return $"client:{actor.ClientId}:user:{actor.ActorId}";
+                }
+                return $"client:{actor.ClientId}";
             }
 
             if (!string.IsNullOrEmpty(actor.ActorId))
             {
-                if (keyParts.Length > 0) keyParts.Append(":");
-                keyParts.Append($"user:{actor.ActorId}");
+                return $"user:{actor.ActorId}";
             }
 
-            if (keyParts.Length == 0)
-                keyParts.Append("anonymous:ip");
-
-            return keyParts.ToString();
+            return "anonymous:ip";
         }
     }
 }

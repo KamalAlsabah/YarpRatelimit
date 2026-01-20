@@ -1,5 +1,6 @@
 using ReverseProxy.RateLimiting.Domain.Models.Rules;
 using ReverseProxy.RateLimiting.Domain.Models.Strategies;
+using ReverseProxy.RateLimiting.Infrastructure.Caching;
 using System.Collections.Immutable;
 
 namespace ReverseProxy.RateLimiting.Integration.Configuration
@@ -15,6 +16,11 @@ namespace ReverseProxy.RateLimiting.Integration.Configuration
         public ImmutableList<RouteRule> RouteRules { get; }
         public ImmutableList<TenantRule> TenantRules { get; }
         public RateLimitStrategy GlobalDefault { get; }
+        
+        /// <summary>
+        /// Pre-indexed cache for fast O(1)/O(log n) lookups
+        /// </summary>
+        public IndexedRuleCache IndexedCache { get; }
 
         public RateLimitConfiguration(
             ImmutableList<WhitelistRule> whitelistRules,
@@ -26,6 +32,9 @@ namespace ReverseProxy.RateLimiting.Integration.Configuration
             RouteRules = routeRules ?? ImmutableList<RouteRule>.Empty;
             TenantRules = tenantRules ?? ImmutableList<TenantRule>.Empty;
             GlobalDefault = globalDefault;
+            
+            // Build indexed cache for performance
+            IndexedCache = new IndexedRuleCache(WhitelistRules, RouteRules, TenantRules);
         }
     }
 }

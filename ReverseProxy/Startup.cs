@@ -74,6 +74,9 @@ namespace ReverseProxy
 
             app.UseEndpoints(endpoints =>
             {
+                // Add metrics endpoint for diagnostics
+                endpoints.MapRateLimitMetrics();
+                
                 endpoints.MapReverseProxy().RequireRateLimiting("gateway-policy");
             });
         }

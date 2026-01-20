@@ -3,24 +3,37 @@ using ReverseProxy.RateLimiting.Domain.Models.Rules;
 using ReverseProxy.RateLimiting.Domain.Models.Strategies;
 using ReverseProxy.RateLimiting.Integration.Configuration;
 using StackExchange.Redis;
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 
 namespace ReverseProxy.RateLimiting.Integration
 {
-    public sealed class ConfigurationFromSettingsProvider : IRateLimitConfigurationProvider
+    public sealed class ConfigurationFromSettingsProvider : IRateLimitConfigurationProvider, IDisposable
     {
-        private readonly IOptions<RateLimitSettingsOptions> _options;
+        private readonly IOptionsMonitor<RateLimitSettingsOptions> _options;
         private readonly IConnectionMultiplexer _connection;
-        private RateLimitConfiguration _cachedConfig;
+        private RateLimitConfiguration? _cachedConfig;
         private readonly object _lockObject = new object();
+        private IDisposable? _changeListener;
 
         public ConfigurationFromSettingsProvider(
-            IOptions<RateLimitSettingsOptions> options,
+            IOptionsMonitor<RateLimitSettingsOptions> options,
             IConnectionMultiplexer connection)
         {
             _options = options;
             _connection = connection;
+            
+            // Listen for configuration changes for hot reload
+            _changeListener = _options.OnChange(_ => InvalidateCache());
+        }
+
+        public void InvalidateCache()
+        {
+            lock (_lockObject)
+            {
+                _cachedConfig = null;
+            }
         }
 
         public RateLimitConfiguration GetConfiguration()
@@ -33,7 +46,7 @@ namespace ReverseProxy.RateLimiting.Integration
                 if (_cachedConfig != null)
                     return _cachedConfig;
 
-                var settings = _options.Value;
+                var settings = _options.CurrentValue;
 
                 var whitelistRules = ConvertWhitelistRules(settings.WhitelistRules ?? new());
                 var routeRules = ConvertRouteRules(settings.RouteRules ?? new());
@@ -130,8 +143,13 @@ namespace ReverseProxy.RateLimiting.Integration
             if (settings == null)
                 return new WhitelistStrategy();
 
+            // Pre-parse TimeSpans once during configuration loading
             var windowSeconds = settings.WindowSeconds ?? ParseTimeSpanSeconds(settings.Window);
             var replenishmentSeconds = settings.ReplenishmentPeriodSeconds ?? ParseTimeSpanSeconds(settings.ReplenishmentPeriod);
+
+            // Use pre-computed TimeSpan values to avoid runtime parsing
+            var window = System.TimeSpan.FromSeconds(windowSeconds ?? 60);
+            var replenishmentPeriod = System.TimeSpan.FromSeconds(replenishmentSeconds ?? 60);
 
             return settings.Type switch
             {
@@ -139,7 +157,7 @@ namespace ReverseProxy.RateLimiting.Integration
                     new TokenBucketConfig(
                         settings.TokenLimit ?? 100,
                         settings.TokensPerPeriod ?? 10,
-                        System.TimeSpan.FromSeconds(replenishmentSeconds ?? 60)),
+                        replenishmentPeriod),
                     _connection),
 
                 "Concurrency" => (RateLimitStrategy)new ConcurrencyStrategy(
@@ -151,13 +169,13 @@ namespace ReverseProxy.RateLimiting.Integration
                 "FixedWindow" => (RateLimitStrategy)new FixedWindowStrategy(
                     new FixedWindowConfig(
                         settings.PermitLimit ?? 10,
-                        System.TimeSpan.FromSeconds(windowSeconds ?? 60)),
+                        window),
                     _connection),
 
                 "SlidingWindow" => (RateLimitStrategy)new SlidingWindowStrategy(
                     new SlidingWindowConfig(
                         settings.PermitLimit ?? 10,
-                        System.TimeSpan.FromSeconds(windowSeconds ?? 60)),
+                        window),
                     _connection),
 
                 _ => new WhitelistStrategy()
@@ -194,6 +212,11 @@ namespace ReverseProxy.RateLimiting.Integration
                 return (int)ts.TotalSeconds;
 
             return null;
+        }
+
+        public void Dispose()
+        {
+            _changeListener?.Dispose();
         }
     }
 
@@ -253,5 +276,20 @@ namespace ReverseProxy.RateLimiting.Integration
         public int? QueueLimit { get; set; }
         public int? WindowSeconds { get; set; }
         public string Window { get; set; }
+    }
+
+    // Extension methods for hot reload support
+    public static class ConfigurationProviderExtensions
+    {
+        /// <summary>
+        /// Trigger manual configuration reload (useful for testing)
+        /// </summary>
+        public static void Reload(this IRateLimitConfigurationProvider provider)
+        {
+            if (provider is ConfigurationFromSettingsProvider settingsProvider)
+            {
+                settingsProvider.InvalidateCache();
+            }
+        }
     }
 }
