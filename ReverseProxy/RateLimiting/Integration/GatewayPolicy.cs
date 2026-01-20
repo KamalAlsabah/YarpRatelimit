@@ -3,7 +3,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using RedisRateLimiting.AspNetCore;
-using ReverseProxy.RateLimiting.Domain.Matchers;
 using ReverseProxy.RateLimiting.Domain.Models;
 using ReverseProxy.RateLimiting.Domain.Resolution;
 using ReverseProxy.RateLimiting.Integration.Configuration;

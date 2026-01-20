@@ -3,7 +3,7 @@
 using Microsoft.AspNetCore.Http;
 using ReverseProxy.RateLimiting.Domain.Models;
 
-namespace ReverseProxy.RateLimiting.Domain.Matchers
+namespace ReverseProxy.RateLimiting.Domain.Resolution
 {
     public interface IRequestActorResolver
     {

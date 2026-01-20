@@ -1,12 +1,12 @@
 
 using Microsoft.AspNetCore.Http;
-using ReverseProxy.RateLimiting.Domain.Matchers;
 using ReverseProxy.RateLimiting.Domain.Models;
+using ReverseProxy.RateLimiting.Domain.Resolution;
 using System;
 using System.Linq;
 using System.Security.Claims;
 
-namespace ReverseProxy.RateLimiting.Infrastructure.Matchers
+namespace ReverseProxy.RateLimiting.Infrastructure.Resolution
 {
     public sealed class RequestActorResolver : IRequestActorResolver
     {
