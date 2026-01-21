@@ -29,13 +29,14 @@ namespace ReverseProxy.RateLimiting.Extensions
             services.AddSingleton<IRouteRuleResolver, RouteRuleResolver>();
             services.AddSingleton<ITenantRuleResolver, TenantRuleResolver>();
 
-            services.AddSingleton<IRateLimitRuleOrchestrator, RateLimitRuleOrchestrator>();
-
-            // Performance monitoring (optional)
+            // Performance monitoring (optional) - register metrics before orchestrator so it can be injected
             if (enableMetrics)
             {
                 services.AddSingleton<IRateLimitMetrics, RateLimitMetrics>();
             }
+
+            // Orchestrator depends optionally on IRateLimitMetrics; register after metrics registration to ensure DI can resolve it
+            services.AddSingleton<IRateLimitRuleOrchestrator, RateLimitRuleOrchestrator>();
 
             services.AddSingleton<GatewayPolicy>();
 
